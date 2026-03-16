@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BankAssist — AI Circular Intelligence</title>
+  <meta name="description" content="Personalized AI assistant for bank staff. Queries answered from internal circulars and regulatory documents." />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ══ Sidebar ══════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="bank-logo">
+        <div class="logo-icon">🏦</div>
+        <div class="logo-text">
+          <h1>BankAssist AI</h1>
+          <p>Circular Intelligence System</p>
+        </div>
+      </div>
+      <button class="new-chat-btn" id="newChatBtn" onclick="startNewChat()">
+        ＋ New Conversation
+      </button>
+    </div>
+
+    <div class="sidebar-section-title">Recent Conversations</div>
+    <div class="chat-history" id="chatHistory">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status" id="serverStatus">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting…</span>
+      </div>
+      <a href="/admin" class="sidebar-nav-btn">
+        ⚙️ Admin Panel
+      </a>
+      <button class="sidebar-nav-btn" onclick="showShortcuts()">
+        ⌨️ Keyboard Shortcuts
+      </button>
+    </div>
+  </aside>
+
+  <!-- ══ Main Chat ════════════════════════════════════════ -->
+  <main class="chat-main">
+
+    <!-- Header -->
+    <div class="chat-header">
+      <div>
+        <div class="chat-header-title" id="chatTitle">New Conversation</div>
+        <div class="chat-header-sub">Grounded answers from internal circulars</div>
+      </div>
+      <div class="header-badges">
+        <span class="badge rag-badge">RAG Enabled</span>
+        <span class="badge safe-badge">No Hallucination</span>
+        <span class="badge" id="docCountBadge">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages-wrapper" id="messagesWrapper">
+      <div class="messages-container" id="messagesContainer">
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🏦</div>
+          <h2>What can I help you with?</h2>
+          <p>I answer queries from your bank's internal circulars and regulatory documents. Every answer includes the source circular reference and date.</p>
+          <div class="suggestion-chips" id="suggestionChips">
+            <div class="chip" onclick="useChip(this)">📋 What is the interest rate for KCC loans as per latest circular?</div>
+            <div class="chip" onclick="useChip(this)">📅 What are the latest RBI guidelines on KYC compliance?</div>
+            <div class="chip" onclick="useChip(this)">📄 Show me circulars related to NPA classification norms</div>
+            <div class="chip" onclick="useChip(this)">💰 What is the NABARD refinance limit for farm loans?</div>
+            <div class="chip" onclick="useChip(this)">🔒 What are the data security guidelines for digital banking?</div>
+            <div class="chip" onclick="useChip(this)">📊 What are the priority sector lending targets?</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="input-container">
+        <div class="input-box">
+          <textarea
+            id="chatInput"
+            placeholder="Ask about any circular, policy, or regulatory guideline…"
+            rows="1"
+            maxlength="2000"
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" title="Send (Enter)">➤</button>
+        </div>
+        <div class="input-footer">
+          <span>Press <kbd style="padding:1px 5px;background:#222;border-radius:3px;font-size:11px;">Enter</kbd> to send &nbsp;·&nbsp; <kbd style="padding:1px 5px;background:#222;border-radius:3px;font-size:11px;">Shift+Enter</kbd> for new line</span>
+          <span class="char-count" id="charCount">0 / 2000</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Shortcuts Modal -->
+<div id="shortcutsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;max-width:380px;width:90%;">
+    <h3 style="color:var(--gold-light);margin-bottom:16px;font-size:16px;">⌨️ Keyboard Shortcuts</h3>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;color:var(--text-secondary);">
+      <tr><td style="padding:6px 0;"><kbd style="padding:2px 7px;background:#333;border-radius:4px;">Enter</kbd></td><td style="padding:6px 0 6px 12px;">Send message</td></tr>
+      <tr><td><kbd style="padding:2px 7px;background:#333;border-radius:4px;">Shift+Enter</kbd></td><td style="padding:6px 0 6px 12px;">New line</td></tr>
+      <tr><td><kbd style="padding:2px 7px;background:#333;border-radius:4px;">Ctrl+/</kbd></td><td style="padding:6px 0 6px 12px;">New conversation</td></tr>
+    </table>
+    <button onclick="document.getElementById('shortcutsModal').style.display='none'" style="margin-top:16px;padding:8px 20px;background:var(--gold);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;color:#111;width:100%;">Close</button>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BankAssist — Admin Panel</title>
+  <meta name="description" content="Admin panel for managing bank circulars and the AI knowledge base." />
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>" />
+  <style>
+    /* Admin-specific overrides */
+    body { overflow: auto; }
+    .admin-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+    }
+    .admin-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 32px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(12px);
+    }
+    .admin-header-left { display: flex; align-items: center; gap: 14px; }
+    .admin-logo { font-size: 24px; }
+    .admin-title { font-size: 16px; font-weight: 700; color: var(--gold-light); }
+    .admin-subtitle { font-size: 12px; color: var(--text-muted); }
+
+    .admin-content {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 0 24px 60px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .admin-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .admin-card.full-width { grid-column: 1 / -1; }
+
+    .card-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .card-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .card-icon.gold { background: linear-gradient(135deg, var(--gold), var(--gold-light)); }
+    .card-icon.blue { background: linear-gradient(135deg, #1e40af, #3b82f6); }
+    .card-icon.green { background: linear-gradient(135deg, #065f46, #10b981); }
+    .card-icon.purple { background: linear-gradient(135deg, #4c1d95, #8b5cf6); }
+
+    .card-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+    .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+      grid-column: 1 / -1;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .stat-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+    .stat-value { font-size: 32px; font-weight: 700; color: var(--gold-light); }
+    .stat-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    /* Upload Zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg-input);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--gold);
+      background: var(--gold-glow);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-text { font-size: 14px; color: var(--text-secondary); }
+    .upload-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+    /* Progress */
+    .progress-bar-wrap {
+      background: var(--bg-input);
+      border-radius: 10px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: #111;
+    }
+    .btn-primary:hover { box-shadow: 0 6px 20px rgba(201,168,76,0.4); transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-outline:hover { border-color: var(--gold-dim); color: var(--gold); background: var(--gold-glow); }
+    .btn-danger {
+      background: transparent;
+      border: 1px solid rgba(239,68,68,0.3);
+      color: #ef4444;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.08); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+    /* Documents Table */
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .doc-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .doc-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+    .doc-table tr:last-child td { border-bottom: none; }
+    .doc-table tr:hover td { background: var(--bg-hover); }
+
+    .doc-name { color: var(--text-primary); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .ref-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--gold-glow);
+      border: 1px solid var(--gold-dim);
+      border-radius: 10px;
+      font-size: 11px;
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .auth-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px; font-weight: 600;
+      background: rgba(59,130,246,0.1);
+      color: var(--accent-blue);
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+    .auth-badge.rbi { color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
+    .auth-badge.nabard { color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2); }
+    .auth-badge.sebi { color: #8b5cf6; background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.2); }
+    .auth-badge.internal { color: var(--gold); background: var(--gold-glow); border-color: var(--gold-dim); }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: var(--shadow-card);
+      z-index: 999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      display: flex; align-items: center; gap: 10px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: rgba(16,185,129,0.4); }
+    #toast.error   { border-color: rgba(239,68,68,0.4); }
+
+    /* Log Area */
+    .log-area {
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+      height: 160px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .log-line.ok { color: var(--accent-green); }
+    .log-line.err { color: var(--accent-red); }
+    .log-line.info { color: var(--accent-blue); }
+
+    .section-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 8px 0 16px;
+    }
+    .section-divider span { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .section-divider::before, .section-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border-subtle);
+    }
+
+    @media (max-width: 768px) {
+      .admin-content { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .admin-card.full-width { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="admin-shell">
+
+  <!-- ══ Header ═══════════════════════════════════════════ -->
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <span class="admin-logo">⚙️</span>
+      <div>
+        <div class="admin-title">BankAssist Admin Panel</div>
+        <div class="admin-subtitle">Manage knowledge base · Upload circulars · Monitor system</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <div class="sidebar-status" style="padding:8px 14px;background:var(--bg-card);border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);border:1px solid var(--border-subtle);">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Connecting…</span>
+      </div>
+      <a href="/" class="btn btn-outline">💬 Chat</a>
+    </div>
+  </header>
+
+  <!-- ══ Content Grid ══════════════════════════════════════ -->
+  <div class="admin-content">
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="statInternalDocs">—</div>
+        <div class="stat-label">Internal Circulars</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statExternalDocs">—</div>
+        <div class="stat-label">Regulatory Docs (Web)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statChunks">—</div>
+        <div class="stat-label">Vector Chunks Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statQueries">—</div>
+        <div class="stat-label">Queries Served</div>
+      </div>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="admin-card">
+      <div class="card-header">
+        <div class="card-icon gold">📤</div>
+        <div>
+          <div class="card-title">Upload Circulars</div>
+          <div class="card-subtitle">PDF, DOC, DOCX, XLS, XLSX, TXT supported</div>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onchange="handleFileSelect(this)" />
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">Drag &amp; drop circulars here or click to browse</div>
+        <div class="upload-hint">Supports: PDF · DOCX · XLSX · TXT · MAX 50MB per file</div>
+      </div>
+
+      <div id="uploadProgress" style="display:none;margin-top:12px;">
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;" id="uploadLabel">Uploading…</div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="triggerUpload()">📤 Upload Selected Files</button>
+        <button class="btn btn-outline" onclick="ingestFolder()">📁 Re-ingest All from Folder</button>
+        <button class="btn btn-danger" onclick="forceReingest()" title="Clears entire vector DB and re-ingests all documents fresh">🔄 Force Re-ingest All (Clean)</button>
+      </div>
+    </div>
+
+    <!-- Web Learning Card -->
+    <div class="admin-card">
+      <div class="card-header">
+        <div class="card-icon blue">🌐</div>
+        <div>
+          <div class="card-title">Secondary Web Learning</div>
+          <div class="card-subtitle">Fetch circulars from RBI, NABARD, SEBI</div>
+        </div>
+      </div>
+
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">
+        Fetch and index publicly available circulars and notifications from regulatory bodies. This supplements the internal knowledge base.
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+            <span>🔴</span> Reserve Bank of India (RBI)
+          </div>
+          <span class="auth-badge rbi">Active</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+            <span>🟢</span> NABARD
+          </div>
+          <span class="auth-badge nabard">Active</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
+            <span>🟣</span> SEBI
+          </div>
+          <span class="auth-badge sebi">Active</span>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" id="webScrapeBtn" onclick="startWebScraping()" style="width:100%;">
+        🌐 Start Web Fetch Now
+      </button>
+    </div>
+
+    <!-- Ingestion Log -->
+    <div class="admin-card">
+      <div class="card-header">
+        <div class="card-icon green">📋</div>
+        <div>
+          <div class="card-title">Activity Log</div>
+          <div class="card-subtitle">Real-time ingestion events</div>
+        </div>
+      </div>
+      <div class="log-area" id="logArea">
+        <div class="log-line info">[SYSTEM] Admin panel loaded. Ready.</div>
+      </div>
+      <button class="btn btn-outline" onclick="clearLog()" style="margin-top:10px;font-size:12px;padding:6px 14px;">🗑 Clear Log</button>
+    </div>
+
+    <!-- Query Logs -->
+    <div class="admin-card">
+      <div class="card-header">
+        <div class="card-icon purple">📊</div>
+        <div>
+          <div class="card-title">Recent Queries</div>
+          <div class="card-subtitle">Last 10 user queries served</div>
+        </div>
+      </div>
+      <div id="queryLogArea" style="font-size:13px;color:var(--text-secondary);">
+        <div style="color:var(--text-muted);text-align:center;padding:20px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="admin-card full-width">
+      <div class="card-header">
+        <div class="card-icon gold">🗃️</div>
+        <div>
+          <div class="card-title">Knowledge Base Documents</div>
+          <div class="card-subtitle">All indexed circulars and regulatory documents</div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;" id="docsTableWrap">
+        <div style="color:var(--text-muted);text-align:center;padding:40px;">Loading documents…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const API = window.location.origin;
+
+// ─── Init ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  checkStatus();
+  loadStats();
+  loadDocs();
+  loadQueryLogs();
+  setupDragDrop();
+  setInterval(checkStatus, 15000);
+});
+
+// ─── Status ──────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/api/status`, { signal: AbortSignal.timeout(5000) });
+    const data = await r.json();
+    document.getElementById('statusDot').classList.toggle('online', r.ok);
+    document.getElementById('statusText').textContent = r.ok ? 'Online' : 'Offline';
+
+    const totalChunks = Object.values(data.vector_db || {}).reduce((a,b) => a+b, 0);
+    document.getElementById('statChunks').textContent = totalChunks.toLocaleString();
+    document.getElementById('statQueries').textContent = data.queries_served || 0;
+  } catch {
+    document.getElementById('statusDot').classList.remove('online');
+    document.getElementById('statusText').textContent = 'Offline';
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/api/documents`);
+    const data = await r.json();
+    document.getElementById('statInternalDocs').textContent = (data.internal_circulars || []).length;
+    document.getElementById('statExternalDocs').textContent = (data.regulatory_docs || []).length;
+  } catch {}
+}
+
+// ─── Document Table ──────────────────────────────────────
+async function loadDocs() {
+  try {
+    const r = await fetch(`${API}/api/documents`);
+    const data = await r.json();
+    const all = [
+      ...(data.internal_circulars || []).map(d => ({...d, _type:'internal'})),
+      ...(data.regulatory_docs || []).map(d => ({...d, _type:'external'})),
+    ];
+    renderDocsTable(all);
+  } catch (e) {
+    document.getElementById('docsTableWrap').innerHTML =
+      '<div style="color:var(--accent-red);padding:20px">Failed to load documents. Is the server running?</div>';
+  }
+}
+
+function renderDocsTable(docs) {
+  const wrap = document.getElementById('docsTableWrap');
+  if (docs.length === 0) {
+    wrap.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:40px;">No documents indexed yet. Upload circulars to get started.</div>';
+    return;
+  }
+  const rows = docs.map(d => {
+    const auth = (d.authority || 'Internal').toLowerCase();
+    const authClass = ['rbi','nabard','sebi'].includes(auth) ? auth : 'internal';
+    const icon = d.filename?.endsWith('.pdf') ? '📕' : d.filename?.endsWith('.xlsx') || d.filename?.endsWith('.xls') ? '📗' : '📘';
+    const typeLabel = d._type === 'external' ? '🌐 Web' : '📁 Upload';
+    return `
+      <tr>
+        <td><div class="doc-name">${icon} ${escHtml(d.filename || '—')}</div></td>
+        <td><span class="ref-badge" title="${escHtml(d.ref_no || '')}">${escHtml(d.ref_no || 'N/A')}</span></td>
+        <td>${escHtml(d.date || 'N/A')}</td>
+        <td><span class="auth-badge ${authClass}">${escHtml(d.authority || 'Internal')}</span></td>
+        <td style="color:var(--text-muted);">${escHtml(d.total_chunks || '—')} chunks</td>
+        <td style="color:var(--text-muted);">${typeLabel}</td>
+        <td>
+          <button class="btn btn-danger" style="padding:5px 10px;font-size:11px;" onclick="deleteDoc('${escHtml(d.filename)}')">Delete</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>Filename</th>
+          <th>Circular Ref No.</th>
+          <th>Date</th>
+          <th>Authority</th>
+          <th>Size</th>
+          <th>Source</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ─── Upload ───────────────────────────────────────────────
+let selectedFiles = [];
+
+function handleFileSelect(input) {
+  selectedFiles = Array.from(input.files);
+  log(`Selected ${selectedFiles.length} file(s): ${selectedFiles.map(f=>f.name).join(', ')}`, 'info');
+}
+
+async function triggerUpload() {
+  if (!selectedFiles.length) { toast('⚠️ No files selected', 'error'); return; }
+
+  const progress = document.getElementById('uploadProgress');
+  const progressBar = document.getElementById('progressBar');
+  const label = document.getElementById('uploadLabel');
+  progress.style.display = 'block';
+
+  for (let i = 0; i < selectedFiles.length; i++) {
+    const f = selectedFiles[i];
+    label.textContent = `Uploading ${i+1}/${selectedFiles.length}: ${f.name}`;
+    progressBar.style.width = ((i / selectedFiles.length) * 100) + '%';
+
+    const fd = new FormData();
+    fd.append('file', f);
+    try {
+      const r = await fetch(`${API}/api/ingest/upload`, { method: 'POST', body: fd });
+      const data = await r.json();
+      if (r.ok && data.status === 'success') {
+        log(`✓ Uploaded & ingested: ${f.name} (${data.chunks || 0} chunks)`, 'ok');
+        toast(`✓ ${f.name} — ${data.chunks || 0} chunks indexed`, 'success');
+      } else if (data.status === 'error') {
+        log(`⚠ ${f.name}: ${data.message || 'Ingestion failed'}`, 'err');
+        toast(`⚠ ${f.name}: ${data.message || 'Could not extract text'}`, 'error');
+      } else {
+        log(`✗ Error: ${data.detail || 'Unknown error'} (${f.name})`, 'err');
+      }
+    } catch (e) {
+      log(`✗ Network error uploading ${f.name}: ${e.message}`, 'err');
+    }
+  }
+
+  progressBar.style.width = '100%';
+  label.textContent = 'Done!';
+  setTimeout(() => { progress.style.display = 'none'; progressBar.style.width = '0%'; }, 2000);
+
+  selectedFiles = [];
+  document.getElementById('fileInput').value = '';
+  setTimeout(() => { loadDocs(); loadStats(); checkStatus(); }, 3000);
+}
+
+async function ingestFolder() {
+  log('Starting bulk folder ingestion…', 'info');
+  try {
+    const r = await fetch(`${API}/api/ingest/folder`, { method: 'POST' });
+    const data = await r.json();
+    log(`Folder ingestion: ${data.message}`, data.status === 'no_files' ? 'err' : 'ok');
+    toast(data.message, data.status === 'no_files' ? 'error' : 'success');
+    setTimeout(() => { loadDocs(); loadStats(); }, 5000);
+  } catch (e) {
+    log(`Error: ${e.message}`, 'err');
+  }
+}
+
+async function forceReingest() {
+  if (!confirm('⚠️ This will CLEAR the entire vector database and re-ingest all documents from scratch.\n\nThis is recommended when:\n- AI answers are incorrect or stale\n- You uploaded new documents and answers don\'t reflect them\n- Settings were changed\n\nContinue?')) return;
+
+  log('🔄 Force re-ingesting: clearing vector DB and re-ingesting all documents…', 'info');
+  try {
+    const r = await fetch(`${API}/api/ingest/reingest`, { method: 'POST' });
+    const data = await r.json();
+    log(`Force re-ingest: ${data.message}`, data.status === 'no_files' ? 'err' : 'ok');
+    toast(data.message, data.status === 'no_files' ? 'error' : 'success');
+    // Longer timeout since full reingest takes time
+    setTimeout(() => { loadDocs(); loadStats(); checkStatus(); }, 15000);
+  } catch (e) {
+    log(`Error: ${e.message}`, 'err');
+    toast('Force re-ingest failed', 'error');
+  }
+}
+
+// ─── Web Scraping ─────────────────────────────────────────
+async function startWebScraping() {
+  const btn = document.getElementById('webScrapeBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Scraping in progress…';
+  log('Web scraping started (RBI, NABARD, SEBI)…', 'info');
+  try {
+    const r = await fetch(`${API}/api/ingest/web`, { method: 'POST' });
+    const data = await r.json();
+    log(`Web scraping: ${data.message}`, 'ok');
+    toast('Web scraping started in background', 'success');
+    setTimeout(() => { loadDocs(); loadStats(); }, 30000);
+  } catch (e) {
+    log(`Web scraping error: ${e.message}`, 'err');
+    toast('Web scraping failed', 'error');
+  }
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '🌐 Start Web Fetch Now';
+  }, 10000);
+}
+
+// ─── Delete Document ──────────────────────────────────────
+async function deleteDoc(filename) {
+  if (!confirm(`Delete "${filename}" from the knowledge base?`)) return;
+  try {
+    const r = await fetch(`${API}/api/documents/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+    const data = await r.json();
+    if (r.ok) {
+      log(`✓ Deleted ${filename} (${data.chunks_removed} chunks removed)`, 'ok');
+      toast(`✓ ${filename} deleted`, 'success');
+      loadDocs(); loadStats(); checkStatus();
+    } else {
+      log(`✗ Delete failed: ${data.detail}`, 'err');
+    }
+  } catch (e) {
+    log(`Error: ${e.message}`, 'err');
+  }
+}
+
+// ─── Query Logs ───────────────────────────────────────────
+async function loadQueryLogs() {
+  try {
+    const r = await fetch(`${API}/api/logs`);
+    const data = await r.json();
+    const logs = (data.logs || []).slice(-10).reverse();
+    const wrap = document.getElementById('queryLogArea');
+    if (!logs.length) {
+      wrap.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px;">No queries yet</div>';
+      return;
+    }
+    wrap.innerHTML = logs.map((l, i) => `
+      <div style="padding:10px;${i < logs.length-1 ? 'border-bottom:1px solid var(--border-subtle);' : ''}">
+        <div style="color:var(--text-primary);margin-bottom:4px;">❓ ${escHtml(l.query)}</div>
+        <div style="font-size:11px;color:var(--text-muted);">
+          📎 ${l.sources_count} source(s) cited &nbsp;·&nbsp; 🕑 ${new Date(l.timestamp).toLocaleString('en-IN')}
+        </div>
+      </div>
+    `).join('');
+  } catch {}
+}
+
+// ─── Drag & Drop ──────────────────────────────────────────
+function setupDragDrop() {
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const files = Array.from(e.dataTransfer.files).filter(f =>
+      /\.(pdf|doc|docx|xls|xlsx|txt)$/i.test(f.name)
+    );
+    if (files.length) {
+      selectedFiles = files;
+      log(`Dropped ${files.length} file(s): ${files.map(f=>f.name).join(', ')}`, 'info');
+      toast(`${files.length} file(s) ready to upload`, 'success');
+    } else {
+      toast('⚠️ Only PDF, DOCX, XLSX files supported', 'error');
+    }
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+function log(msg, type='info') {
+  const area = document.getElementById('logArea');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  const time = new Date().toLocaleTimeString('en-IN');
+  line.textContent = `[${time}] ${msg}`;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logArea').innerHTML = '<div class="log-line info">[SYSTEM] Log cleared.</div>';
+}
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = type === 'success' ? '✓ ' + msg : '✗ ' + msg;
+  el.className = 'show ' + type;
+  setTimeout(() => { el.className = ''; }, 3500);
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
