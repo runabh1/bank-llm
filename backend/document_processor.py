@@ -22,6 +22,14 @@ import openpyxl
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 
+# Configure pytesseract for OCR (Windows)
+try:
+    import pytesseract
+    # Try to set the path for Windows installation
+    pytesseract.pytesseract.pytesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+except ImportError:
+    pytesseract = None
+
 from config import (
     VECTOR_DB_DIR,
     CHROMA_COLLECTION_INTERNAL,
@@ -129,6 +137,8 @@ def extract_circular_metadata(text: str, filename: str) -> dict:
 
 def parse_pdf(filepath: Path) -> str:
     text = ""
+    
+    # Method 1: pypdf (fast, standard)
     try:
         with open(filepath, 'rb') as f:
             reader = pypdf.PdfReader(f)
@@ -140,9 +150,33 @@ def parse_pdf(filepath: Path) -> str:
                 except Exception as page_err:
                     logger.warning(f"Error on page {i} of {filepath.name}: {page_err}")
     except Exception as e:
-        logger.error(f"PDF critical parse error {filepath.name}: {e}")
+        logger.warning(f"pypdf parsing error {filepath.name}: {e}")
 
-    # Fallback: try pdfminer if pypdf returned very little text
+    # Method 2: PyMuPDF (fitz) - better for corrupted PDFs
+    if len(text.strip()) < 50:
+        try:
+            import fitz
+            logger.info(f"  Trying PyMuPDF (fitz) for {filepath.name}...")
+            doc = fitz.open(str(filepath))
+            fitz_text = ""
+            for page_num in range(len(doc)):
+                try:
+                    page = doc[page_num]
+                    page_text = page.get_text()
+                    if page_text:
+                        fitz_text += page_text + "\n"
+                except Exception as page_err:
+                    logger.warning(f"PyMuPDF page {page_num} error in {filepath.name}: {page_err}")
+            doc.close()
+            if fitz_text and len(fitz_text.strip()) > len(text.strip()):
+                logger.info(f"  PyMuPDF extracted {len(fitz_text)} chars from {filepath.name}")
+                text = fitz_text
+        except ImportError:
+            logger.warning("PyMuPDF (fitz) not installed — skipping")
+        except Exception as e2:
+            logger.warning(f"PyMuPDF parsing error {filepath.name}: {e2}")
+
+    # Method 3: pdfminer fallback
     if len(text.strip()) < 50:
         try:
             from pdfminer.high_level import extract_text as pdfminer_extract
@@ -154,6 +188,29 @@ def parse_pdf(filepath: Path) -> str:
             logger.warning("pdfminer.six not installed — skipping PDF fallback extraction")
         except Exception as e2:
             logger.warning(f"pdfminer fallback also failed for {filepath.name}: {e2}")
+
+    # Method 4: OCR (pytesseract) for scanned/image-only PDFs
+    if len(text.strip()) < 50:
+        try:
+            from pdf2image import convert_from_path
+            import pytesseract
+            logger.info(f"  Attempting OCR extraction for {filepath.name}...")
+            images = convert_from_path(str(filepath))
+            ocr_text = ""
+            for i, image in enumerate(images):
+                try:
+                    page_ocr = pytesseract.image_to_string(image)
+                    if page_ocr:
+                        ocr_text += page_ocr + "\n"
+                except Exception as ocr_err:
+                    logger.warning(f"OCR failed on page {i} of {filepath.name}: {ocr_err}")
+            if ocr_text and len(ocr_text.strip()) > len(text.strip()):
+                logger.info(f"  OCR extraction yielded {len(ocr_text)} chars for {filepath.name}")
+                text = ocr_text
+        except ImportError as ie:
+            logger.warning(f"OCR packages not installed (pdf2image or pytesseract) — cannot process scanned PDFs: {ie}")
+        except Exception as e3:
+            logger.warning(f"OCR extraction failed for {filepath.name}: {e3}")
 
     return text.strip()
 
