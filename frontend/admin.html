@@ -291,10 +291,6 @@
         <div class="stat-label">Internal Circulars</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value" id="statExternalDocs">—</div>
-        <div class="stat-label">Regulatory Docs (Web)</div>
-      </div>
-      <div class="stat-card">
         <div class="stat-value" id="statChunks">—</div>
         <div class="stat-label">Vector Chunks Total</div>
       </div>
@@ -331,46 +327,6 @@
         <button class="btn btn-outline" onclick="ingestFolder()">📁 Re-ingest All from Folder</button>
         <button class="btn btn-danger" onclick="forceReingest()" title="Clears entire vector DB and re-ingests all documents fresh">🔄 Force Re-ingest All (Clean)</button>
       </div>
-    </div>
-
-    <!-- Web Learning Card -->
-    <div class="admin-card">
-      <div class="card-header">
-        <div class="card-icon blue">🌐</div>
-        <div>
-          <div class="card-title">Secondary Web Learning</div>
-          <div class="card-subtitle">Fetch circulars from RBI, NABARD, SEBI</div>
-        </div>
-      </div>
-
-      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:16px;">
-        Fetch and index publicly available circulars and notifications from regulatory bodies. This supplements the internal knowledge base.
-      </p>
-
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
-            <span>🔴</span> Reserve Bank of India (RBI)
-          </div>
-          <span class="auth-badge rbi">Active</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
-            <span>🟢</span> NABARD
-          </div>
-          <span class="auth-badge nabard">Active</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-input);border-radius:var(--radius-sm);border:1px solid var(--border-subtle);">
-          <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);">
-            <span>🟣</span> SEBI
-          </div>
-          <span class="auth-badge sebi">Active</span>
-        </div>
-      </div>
-
-      <button class="btn btn-outline" id="webScrapeBtn" onclick="startWebScraping()" style="width:100%;">
-        🌐 Start Web Fetch Now
-      </button>
     </div>
 
     <!-- Ingestion Log -->
@@ -597,28 +553,6 @@ async function forceReingest() {
     log(`Error: ${e.message}`, 'err');
     toast('Force re-ingest failed', 'error');
   }
-}
-
-// ─── Web Scraping ─────────────────────────────────────────
-async function startWebScraping() {
-  const btn = document.getElementById('webScrapeBtn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Scraping in progress…';
-  log('Web scraping started (RBI, NABARD, SEBI)…', 'info');
-  try {
-    const r = await fetch(`${API}/api/ingest/web`, { method: 'POST' });
-    const data = await r.json();
-    log(`Web scraping: ${data.message}`, 'ok');
-    toast('Web scraping started in background', 'success');
-    setTimeout(() => { loadDocs(); loadStats(); }, 30000);
-  } catch (e) {
-    log(`Web scraping error: ${e.message}`, 'err');
-    toast('Web scraping failed', 'error');
-  }
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.innerHTML = '🌐 Start Web Fetch Now';
-  }, 10000);
 }
 
 // ─── Delete Document ──────────────────────────────────────
