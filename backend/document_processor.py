@@ -60,6 +60,21 @@ def get_collection(collection_name: str):
     )
 
 
+def is_file_already_ingested(filename: str, collection_name: str = CHROMA_COLLECTION_INTERNAL) -> bool:
+    """
+    Check if a file has already been ingested into the vector database.
+    Returns True if the file exists in metadata, False otherwise.
+    """
+    try:
+        collection = get_collection(collection_name)
+        # Query for documents with this filename in metadata
+        results = collection.get(where={"filename": filename})
+        return len(results.get("ids", [])) > 0
+    except Exception as e:
+        logger.warning(f"Error checking if file is ingested: {e}")
+        return False
+
+
 # ─── Embedding Function ───────────────────────────────────────────────────────
 
 def get_embeddings():

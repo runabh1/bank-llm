@@ -37,23 +37,8 @@ SERVER_PORT = 8000
 CORS_ORIGINS = ["*"]        # Allow all origins on LAN
 
 # ─── Web Scraping (Secondary Learning) ────────────────────────────────────────
-SCRAPE_SOURCES = [
-    {
-        "name": "RBI Circulars",
-        "url": "https://www.rbi.org.in/Scripts/BS_CircularIndexDisplay.aspx",
-        "type": "rbi"
-    },
-    {
-        "name": "NABARD Notifications",
-        "url": "https://www.nabard.org/content1.aspx?id=572&catid=23&mid=530",
-        "type": "nabard"
-    },
-    {
-        "name": "SEBI Circulars",
-        "url": "https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=1&ssid=2&smid=1",
-        "type": "sebi"
-    },
-]
+# Web scraping disabled - using uploaded documents only
+SCRAPE_SOURCES = []
 
 # ─── System Prompt (Anti-Hallucination) ───────────────────────────────────────
 SYSTEM_PROMPT = """You are BankAssist, an AI assistant for bank staff. You are trained on internal bank circulars and regulatory documents from RBI, NABARD, and SEBI.
